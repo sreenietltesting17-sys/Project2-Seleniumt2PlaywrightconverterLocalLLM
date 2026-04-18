@@ -1,6 +1,7 @@
 import json
 import urllib.request
 import urllib.error
+import re
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "codellama:latest"
@@ -17,7 +18,8 @@ def generate_playwright_code(selenium_code: str, target_lang: str) -> str:
         f"2. Keep all original comments.\n"
         f"3. Return ONLY valid {target_lang} code without any markdown wrappers, no ```javascript or ```typescript blocks, "
         f"just the raw text code.\n"
-        f"4. If a mapping is impossible, leave a comment: '// TODO: mapping requires manual intervention'."
+        f"4. ONLY use modern Playwright Locator API (e.g., `page.locator('...').click()`, `page.locator('...').textContent()`). DO NOT use outdated ElementHandles like `page.$()` or `page.$$()`.\n"
+        f"5. If a mapping is impossible, leave a comment: '// TODO: mapping requires manual intervention'."
     )
     
     payload = {
@@ -40,7 +42,13 @@ def generate_playwright_code(selenium_code: str, target_lang: str) -> str:
             # DeepSeek might still output <think> tags or markdown. Clean it up.
             if "</think>" in code_result:
                 code_result = code_result.split("</think>")[-1].strip()
-            if code_result.startswith("```"):
+                
+            # Use regex to extract from markdown blocks if available.
+            match = re.search(r"```[a-zA-Z]*\n(.*?)\n```", code_result, re.DOTALL)
+            if match:
+                code_result = match.group(1).strip()
+            # Fallback if no closing tick found but starts with tick
+            elif code_result.startswith("```"):
                 lines = code_result.split("\n")
                 if len(lines) > 2:
                     code_result = "\n".join(lines[1:-1])
