@@ -1,0 +1,10 @@
+.tmp/
+delivery/
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+env/
+node_modules/
+.DS_Store
